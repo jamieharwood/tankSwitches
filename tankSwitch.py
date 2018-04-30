@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+
+"""
+Trilby Tanks 2018 copyright
+Module: tankSwitch
+"""
+
 from machine import Pin
 import machine
 import utime
@@ -9,6 +16,7 @@ import ubinascii
 functionSelectPin = Pin(5, Pin.IN, Pin.PULL_UP)  # D3
 waterOnPin = Pin(4, Pin.IN, Pin.PULL_UP)  # D4
 
+np = neopixel.NeoPixel(machine.Pin(12), 4)
 neoLow = 0
 neoMid = 64
 neoHi = 255
@@ -27,12 +35,16 @@ hoseLed = 2
 irrigationLed = 1
 pumpLed = 0
 
-functionStateChanged = False
+def getdeviceid():
+    deviceid = ubinascii.hexlify(machine.unique_id()).decode()
+    deviceid = deviceid.replace('b\'', '')
+    deviceid = deviceid.replace('\'', '')
+
+    return deviceid
 
 
 def main():
     # Set initial state
-    np = neopixel.NeoPixel(machine.Pin(12), 4)
     np[powerLed] = red
     np[hoseLed] = purple
     np[irrigationLed] = purple
@@ -52,9 +64,11 @@ def main():
     if vars.waterOn:
         np[pumpLed] = purple
     else:
-        np[pumpLed] = (0, neoHi, 0)
+        np[pumpLed] = green
 
     np.write()
+
+    deviceid = getdeviceid()
 
     while True:
         # Read switch inputs
@@ -95,9 +109,10 @@ def main():
 
         if functionStateChanged:
 
-            deviceid = ubinascii.hexlify(machine.unique_id()).decode()
-            deviceid = deviceid.replace('b\'', '')
-            deviceid = deviceid.replace('\'', '')
+            #  deviceid = ubinascii.hexlify(machine.unique_id()).decode()
+            #  deviceid = deviceid.replace('b\'', '')
+            #  deviceid = deviceid.replace('\'', '')
+            #  deviceid = getdeviceid()
 
             if vars.functionSelect:
                 sensorValue = 1
@@ -117,10 +132,7 @@ def main():
             try:
                 response = urequests.get(url)
 
-                # print(url)
                 print(response.text)
-
-                # utime.sleep(0.25)
 
                 response.close()
             except:
