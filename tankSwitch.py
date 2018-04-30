@@ -8,36 +8,51 @@ import ubinascii
 
 functionSelectPin = Pin(5, Pin.IN, Pin.PULL_UP)  # D3
 waterOnPin = Pin(4, Pin.IN, Pin.PULL_UP)  # D4
+
+neoLow = 0
 neoMid = 64
 neoHi = 255
+
+red = (neoMid, neoLow, neoLow)
+yellow = (255, 226, neoLow)
+tango = (243, 114, 82)
+green = (neoLow, neoMid, neoLow)
+indigo = (neoLow, 126, 135)
+blue = (neoLow, neoLow, neoMid)
+purple = (neoMid, neoLow, neoMid)
+black = (neoLow, neoLow, neoLow)
+
+powerLed = 3
+hoseLed = 2
+irrigationLed = 1
+pumpLed = 0
 
 functionStateChanged = False
 
 
 def main():
-    np = neopixel.NeoPixel(machine.Pin(12), 4)
-
     # Set initial state
-    np[0] = (255, 0, 0)
-    np[1] = (neoMid, 0, neoMid)
-    np[2] = (neoMid, 0, neoMid)
-    np[3] = (neoMid, 0, neoMid)
+    np = neopixel.NeoPixel(machine.Pin(12), 4)
+    np[powerLed] = red
+    np[hoseLed] = purple
+    np[irrigationLed] = purple
+    np[pumpLed] = purple
     np.write()
 
     vars.functionSelect = functionSelectPin.value()
     vars.waterOn = waterOnPin.value()
 
     if vars.functionSelect:
-        np[1] = (neoMid, 0, neoMid)
-        np[2] = (0, neoHi, 0)
+        np[irrigationLed] = indigo
+        np[hoseLed] = purple
     else:
-        np[1] = (0, neoHi, 0)
-        np[2] = (neoMid, 0, neoMid)
+        np[irrigationLed] = purple
+        np[hoseLed] = indigo
 
     if vars.waterOn:
-        np[3] = (neoMid, 0, neoMid)
+        np[pumpLed] = purple
     else:
-        np[3] = (0, neoHi, 0)
+        np[pumpLed] = (0, neoHi, 0)
 
     np.write()
 
@@ -51,11 +66,11 @@ def main():
         # Check against the last input
         if vars.functionSelect != vars.functionSelectLast:
             if vars.functionSelect:
-                np[1] = (neoMid, 0, neoMid)
-                np[2] = (0, neoHi, 0)
+                np[irrigationLed] = indigo
+                np[hoseLed] = purple
             else:
-                np[1] = (0, neoHi, 0)
-                np[2] = (neoMid, 0, neoMid)
+                np[irrigationLed] = purple
+                np[hoseLed] = indigo
 
             functionStateChanged = True
 
@@ -64,9 +79,14 @@ def main():
 
         if vars.waterOn != vars.waterOnLast:
             if vars.waterOn:  # water on
-                np[3] = (neoMid, 0, neoMid)
+                np[pumpLed] = purple
             else:  # water off
-                np[3] = (0, neoHi, 0)
+                np[pumpLed] = green
+
+                if vars.functionSelect:
+                    np[irrigationLed] = green
+                else:
+                    np[hoseLed] = green
 
             functionStateChanged = True
 
