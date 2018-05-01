@@ -16,7 +16,7 @@ import ubinascii
 functionSelectPin = Pin(5, Pin.IN, Pin.PULL_UP)  # D3
 waterOnPin = Pin(4, Pin.IN, Pin.PULL_UP)  # D4
 
-np = neopixel.NeoPixel(machine.Pin(12), 4)
+np = neopixel.NeoPixel(Pin(12), 4)
 neoLow = 0
 neoMid = 64
 neoHi = 255
@@ -35,21 +35,26 @@ hoseLed = 2
 irrigationLed = 1
 pumpLed = 0
 
+# Set initial state
+np[powerLed] = red
+np[hoseLed] = purple
+np[irrigationLed] = purple
+np[pumpLed] = purple
+np.write()
+
+
 def getdeviceid():
+
     deviceid = ubinascii.hexlify(machine.unique_id()).decode()
     deviceid = deviceid.replace('b\'', '')
     deviceid = deviceid.replace('\'', '')
+
+    print(deviceid)
 
     return deviceid
 
 
 def main():
-    # Set initial state
-    np[powerLed] = red
-    np[hoseLed] = purple
-    np[irrigationLed] = purple
-    np[pumpLed] = purple
-    np.write()
 
     vars.functionSelect = functionSelectPin.value()
     vars.waterOn = waterOnPin.value()
@@ -108,11 +113,6 @@ def main():
             print('if ( waterOn != waterOnLast ):')
 
         if functionStateChanged:
-
-            #  deviceid = ubinascii.hexlify(machine.unique_id()).decode()
-            #  deviceid = deviceid.replace('b\'', '')
-            #  deviceid = deviceid.replace('\'', '')
-            #  deviceid = getdeviceid()
 
             if vars.functionSelect:
                 sensorValue = 1
