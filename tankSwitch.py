@@ -30,10 +30,11 @@ blue = (neoLow, neoLow, neoMid)
 purple = (neoMid, neoLow, neoMid)
 black = (neoLow, neoLow, neoLow)
 
-powerLed = 3
+powerLed = 0
+pumpLed = 1
 hoseLed = 2
-irrigationLed = 1
-pumpLed = 0
+irrigationLed = 3
+
 
 # Set initial state
 np[powerLed] = red
@@ -102,10 +103,10 @@ def main():
             else:  # water off
                 np[pumpLed] = green
 
-                if vars.functionSelect:
-                    np[irrigationLed] = green
-                else:
-                    np[hoseLed] = green
+                #if vars.functionSelect:
+                    #np[irrigationLed] = green
+                #else:
+                    #np[hoseLed] = green
 
             functionStateChanged = True
 
@@ -124,7 +125,7 @@ def main():
 
             url = "http://192.168.86.240:5000/sensorStateWrite/{0}/{1}/{2}"
             url = url.replace('{0}', deviceid)  # sensor id
-            url = url.replace('{1}', 'switch-user')  # sensor type
+            url = url.replace('{1}', 'dim_led')  # sensor type
             url = url.replace('{2}', str(sensorValue))  # sensor value
 
             print(url)
