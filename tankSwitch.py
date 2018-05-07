@@ -87,8 +87,8 @@ def settime():
         print('Waiting for time...')
 
     t = time()
-    import machine
-    import utime
+    # import machine
+    # import utime
     tm = utime.localtime(t)
     tm = tm[0:3] + (0,) + tm[3:6] + (0,)
     machine.RTC().datetime(tm)
@@ -101,7 +101,7 @@ def getdeviceid():
     deviceid = deviceid.replace('b\'', '')
     deviceid = deviceid.replace('\'', '')
 
-    print(deviceid)
+    # print(deviceid)
 
     return deviceid
 
@@ -134,16 +134,16 @@ def isstatechanged(state):
 
 
 def heartbeat(sendorid):
-    #returnvalue = 0
+    # returnvalue = 0
     url = "http://192.168.86.240:5000/sensorHeartbeat/{0}".replace('{0}', sendorid)
-    #url = getFullUrl(state)
+    # url = getFullUrl(state)
 
     print(url)
 
     try:
         response = urequests.get(url)
 
-        #returnvalue = int(response.text.replace('\"', ''))
+        # returnvalue = int(response.text.replace('\"', ''))
 
         response.close()
     except:
@@ -152,7 +152,7 @@ def heartbeat(sendorid):
         #  remotePump = False
         print('Fail www connect...')
 
-    #return returnvalue
+    # return returnvalue
 
 
 def getissunrise():
@@ -240,7 +240,7 @@ def main():
             functionStateChanged = True
 
             vars.functionSelectLast = vars.functionSelect  # Set the last pointers
-            print('if ( functionSelect != functionSelectLast ):')
+            # print('if ( functionSelect != functionSelectLast ):')
 
         if vars.waterOn != vars.waterOnLast:
             if vars.waterOn:  # water on
@@ -248,15 +248,10 @@ def main():
             else:  # water off
                 np[pumpLed] = green
 
-                #if vars.functionSelect:
-                    #np[irrigationLed] = green
-                #else:
-                    #np[hoseLed] = green
-
             functionStateChanged = True
 
             vars.waterOnLast = vars.waterOn  # Set the last pointers
-            print('if ( waterOn != waterOnLast ):')
+            # print('if ( waterOn != waterOnLast ):')
 
         if functionStateChanged:
 
