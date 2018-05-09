@@ -7,31 +7,22 @@ Module: tankSwitch
 
 from machine import Pin
 from machine import RTC
+import network
 import machine
 import utime
 import varibles as vars
 import neopixel
 import urequests
 import ubinascii
-
-try:
-    import usocket as socket
-except:
-    import socket
-try:
-    import ustruct as struct
-except:
-    import struct
-
-# (date(2000, 1, 1) - date(1900, 1, 1)).days * 24*60*60
-NTP_DELTA = 3155673600
-
-host = "0.uk.pool.ntp.org"
+from heartbeatClass import HeartBeat
+from timeClass import TimeTank
+from SensorRegistationClass import SensorRegistation
 
 restHost = "http://192.168.86.240:5000/{0}/"
 
 functionSelectPin = Pin(5, Pin.IN, Pin.PULL_UP)  # D3
 waterOnPin = Pin(4, Pin.IN, Pin.PULL_UP)  # D4
+watchdog = Pin(4, Pin.IN, Pin.PULL_UP)  # D4
 
 np = neopixel.NeoPixel(Pin(12), 4)
 neoLow = 0
@@ -59,40 +50,6 @@ np[hoseLed] = purple
 np[irrigationLed] = purple
 np[pumpLed] = purple
 np.write()
-
-
-def time():
-    try:
-        NTP_QUERY = bytearray(48)
-        NTP_QUERY[0] = 0x1b
-        addr = socket.getaddrinfo(host, 123)[0][-1]
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.settimeout(1)
-        res = s.sendto(NTP_QUERY, addr)
-        msg = s.recv(48)
-        s.close()
-        val = struct.unpack("!I", msg[40:44])[0]
-
-        return val - NTP_DELTA
-    except OSError:
-
-        return 0
-
-# There's currently no timezone support in MicroPython, so
-# utime.localtime() will return UTC time (as if it was .gmtime())
-
-
-def settime():
-    while time() == 0:
-        print('Waiting for time...')
-
-    t = time()
-    # import machine
-    # import utime
-    tm = utime.localtime(t)
-    tm = tm[0:3] + (0,) + tm[3:6] + (0,)
-    machine.RTC().datetime(tm)
-    print(utime.localtime())
 
 
 def getdeviceid():
@@ -133,28 +90,6 @@ def isstatechanged(state):
     return returnvalue
 
 
-def heartbeat(sendorid):
-    # returnvalue = 0
-    url = "http://192.168.86.240:5000/sensorHeartbeat/{0}".replace('{0}', sendorid)
-    # url = getFullUrl(state)
-
-    print(url)
-
-    try:
-        response = urequests.get(url)
-
-        # returnvalue = int(response.text.replace('\"', ''))
-
-        response.close()
-    except:
-        #  remoteHose = False
-        #  remoteIrrigation = False
-        #  remotePump = False
-        print('Fail www connect...')
-
-    # return returnvalue
-
-
 def getissunrise():
     return isstatechanged('isSunrise')
 
@@ -163,9 +98,42 @@ def getissunset():
     return isstatechanged('isSunset')
 
 
-def main():
+def getip():
+    sta_if = network.WLAN(network.STA_IF)
+    temp = sta_if.ifconfig()
 
-    settime()
+    return temp[0]
+
+
+def testfornetwork():
+    sta_if = network.WLAN(network.STA_IF)
+    while not sta_if.active():
+        print('Waiting for Wifi')
+
+    while '0.0.0.0' == getip():
+        print('Waiting for IP')
+
+
+def main():
+    testfornetwork()
+
+    debug = False
+    sensorname = 'switch-user'
+
+    if debug:
+        sensorname += '-debug'
+
+    deviceid = getdeviceid()
+
+    mySensorRegistation = SensorRegistation(deviceid)
+    mySensorRegistation.register(sensorname, 'Hardware', 'JH')
+
+    myheartbeat = HeartBeat(deviceid)
+    myheartbeat.beat()
+
+    mytime = TimeTank(deviceid)
+    mytime.settime(1)
+
     rtc = RTC()
     sampletimes = [1, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 56]
     samplehours = [1, 6, 12, 18]
@@ -190,9 +158,6 @@ def main():
 
     np.write()
 
-    deviceid = getdeviceid()
-    heartbeat(deviceid)
-
     while True:
         timeNow = rtc.datetime()
         currHour = timeNow[4]
@@ -210,17 +175,17 @@ def main():
 
         if lastMin != currMinute:
             # process goes here
-            heartbeat(deviceid)
+            myheartbeat.beat()
 
             lastMin = currMinute
 
-        if currMinute not in samplehours and gethour == 0:
+        if currHour not in samplehours and gethour == 0:
             gethour = 1
 
-        if currMinute in samplehours and gethour == 1:
+        if currHour in samplehours and gethour == 1:
             gethour = 0
             local = utime.localtime()
-            settime()
+            mytime.settime(1)
 
         # Read switch inputs
         vars.functionSelect = functionSelectPin.value()
@@ -265,7 +230,7 @@ def main():
 
             url = "http://192.168.86.240:5000/sensorStateWrite/{0}/{1}/{2}"
             url = url.replace('{0}', deviceid)  # sensor id
-            url = url.replace('{1}', 'switch-user')  # sensor type
+            url = url.replace('{1}', sensorname)  # sensor type
             url = url.replace('{2}', str(sensorValue))  # sensor value
 
             print(url)
