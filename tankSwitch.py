@@ -17,26 +17,17 @@ import ubinascii
 from heartbeatClass import HeartBeat
 from timeClass import TimeTank
 from SensorRegistationClass import SensorRegistation
+from NeoPixelClass import NeoPixel
 
-restHost = "http://192.168.86.240:5000/{0}/"
+restHost = "http://192.168.86.240:5000"  # /{0}/"
 
 functionSelectPin = Pin(5, Pin.IN, Pin.PULL_UP)  # D3
 waterOnPin = Pin(4, Pin.IN, Pin.PULL_UP)  # D4
 watchdog = Pin(4, Pin.IN, Pin.PULL_UP)  # D4
 
-np = neopixel.NeoPixel(Pin(12), 4)
-neoLow = 0
-neoMid = 64
-neoHi = 255
-
-red = (neoMid, neoLow, neoLow)
-yellow = (255, 226, neoLow)
-tango = (243, 114, 82)
-green = (neoLow, neoMid, neoLow)
-indigo = (neoLow, 126, 135)
-blue = (neoLow, neoLow, neoMid)
-purple = (neoMid, neoLow, neoMid)
-black = (neoLow, neoLow, neoLow)
+neoPin = 12
+# np = neopixel.NeoPixel(Pin(12), 4)
+np = NeoPixel(neoPin, 4)
 
 powerLed = 0
 pumpLed = 1
@@ -45,10 +36,10 @@ irrigationLed = 3
 
 
 # Set initial state
-np[powerLed] = red
-np[hoseLed] = purple
-np[irrigationLed] = purple
-np[pumpLed] = purple
+np.colour(powerLed, 'red')
+np.colour(hoseLed, 'purple')
+np.colour(irrigationLed, 'purple')
+np.colour(pumpLed, 'purple')
 np.write()
 
 
@@ -64,8 +55,9 @@ def getdeviceid():
 
 
 def getFullUrl(restFunction):
+    # return restHost.replace('{0}', restFunction)
 
-    return restHost.replace('{0}', restFunction)
+    return restHost + '/' + restFunction + '/'
 
 
 def isstatechanged(state):
@@ -82,9 +74,6 @@ def isstatechanged(state):
 
         response.close()
     except:
-        #  remoteHose = False
-        #  remoteIrrigation = False
-        #  remotePump = False
         print('Fail www connect...')
 
     return returnvalue
@@ -132,7 +121,9 @@ def main():
     myheartbeat.beat()
 
     mytime = TimeTank(deviceid)
-    mytime.settime(1)
+    while not mytime.settime():
+        pass
+    # mytime.settime(1)
 
     rtc = RTC()
     sampletimes = [1, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 56]
@@ -145,16 +136,16 @@ def main():
     vars.waterOn = waterOnPin.value()
 
     if vars.functionSelect:
-        np[irrigationLed] = indigo
-        np[hoseLed] = purple
+        np.colour(irrigationLed, 'indigo')
+        np.colour(hoseLed, 'purple')
     else:
-        np[irrigationLed] = purple
-        np[hoseLed] = indigo
+        np.colour(irrigationLed, 'purple')
+        np.colour(hoseLed, 'indigo')
 
     if vars.waterOn:
-        np[pumpLed] = purple
+        np.colour(pumpLed, 'purple')
     else:
-        np[pumpLed] = green
+        np.colour(pumpLed, 'green')
 
     np.write()
 
@@ -185,7 +176,9 @@ def main():
         if currHour in samplehours and gethour == 1:
             gethour = 0
             local = utime.localtime()
-            mytime.settime(1)
+            while not mytime.settime():
+                pass
+            # mytime.settime(1)
 
         # Read switch inputs
         vars.functionSelect = functionSelectPin.value()
@@ -196,11 +189,11 @@ def main():
         # Check against the last input
         if vars.functionSelect != vars.functionSelectLast:
             if vars.functionSelect:
-                np[irrigationLed] = indigo
-                np[hoseLed] = purple
+                np.colour(irrigationLed, 'indigo')
+                np.colour(hoseLed, 'purple')
             else:
-                np[irrigationLed] = purple
-                np[hoseLed] = indigo
+                np.colour(irrigationLed, 'purple')
+                np.colour(hoseLed, 'indigo')
 
             functionStateChanged = True
 
@@ -209,9 +202,9 @@ def main():
 
         if vars.waterOn != vars.waterOnLast:
             if vars.waterOn:  # water on
-                np[pumpLed] = purple
+                np.colour(pumpLed, 'purple')
             else:  # water off
-                np[pumpLed] = green
+                np.colour(pumpLed, 'green')
 
             functionStateChanged = True
 
@@ -225,7 +218,7 @@ def main():
             else:
                 sensorValue = 2
 
-            if vars.waterOn != True:  # water on
+            if not vars.waterOn:  # water on
                 sensorValue += 4
 
             url = "http://192.168.86.240:5000/sensorStateWrite/{0}/{1}/{2}"
@@ -243,7 +236,6 @@ def main():
                 response.close()
             except:
                 print('Fail www connect...')
-            # Save some cycles
 
         np.write()
 
