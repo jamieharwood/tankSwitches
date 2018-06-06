@@ -16,16 +16,14 @@ class sensorState:
     sensorValue = 0.0
 
     def __init__(self):
-        self.dbconn = psycopg2.connect(host=self.dbIPaddress, dbname=self.dbname, user=self.user,
-                                       password=self.password)
+        self.dbconn = psycopg2.connect(host=self.dbIPaddress, dbname=self.dbname, user=self.user, password=self.password)
         self.dbconn.autocommit = True
         self.dbCur = self.dbconn.cursor()
 
         # self.getStatus()
 
     def __call__(self):
-        self.dbconn = psycopg2.connect(host=self.dbIPaddress, dbname=self.dbname, user=self.user,
-                                       password=self.password)
+        self.dbconn = psycopg2.connect(host=self.dbIPaddress, dbname=self.dbname, user=self.user, password=self.password)
         self.dbconn.autocommit = True
         self.dbCur = self.dbconn.cursor()
 
@@ -81,3 +79,4 @@ class sensorState:
 
     def getSensorValue(self):
         return self.sensorvalue
+

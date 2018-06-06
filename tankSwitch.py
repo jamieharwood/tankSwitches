@@ -10,8 +10,7 @@ from machine import RTC
 import network
 import machine
 import utime
-import varibles as vars
-import neopixel
+# import varibles as vars
 import urequests
 import ubinascii
 from heartbeatClass import HeartBeat
@@ -19,15 +18,14 @@ from timeClass import TimeTank
 from SensorRegistationClass import SensorRegistation
 from NeoPixelClass import NeoPixel
 
-restHost = "http://192.168.86.240:5000"  # /{0}/"
+restHost = 'http://192.168.86.240:5000'
 
-functionSelectPin = Pin(5, Pin.IN, Pin.PULL_UP)  # D3
-waterOnPin = Pin(4, Pin.IN, Pin.PULL_UP)  # D4
-watchdog = Pin(4, Pin.IN, Pin.PULL_UP)  # D4
+__functionSelectPin = Pin(5, Pin.IN, Pin.PULL_UP)  # D3
+__waterOnPin = Pin(4, Pin.IN, Pin.PULL_UP)  # D4
+# __watchdog = Pin(4, Pin.IN, Pin.PULL_UP)  # D4
 
-neoPin = 12
-# np = neopixel.NeoPixel(Pin(12), 4)
-np = NeoPixel(neoPin, 4)
+__neoPin = 12
+__np = NeoPixel(__neoPin, 4)
 
 powerLed = 0
 pumpLed = 1
@@ -36,33 +34,39 @@ irrigationLed = 3
 
 
 # Set initial state
-np.colour(powerLed, 'red')
-np.colour(hoseLed, 'purple')
-np.colour(irrigationLed, 'purple')
-np.colour(pumpLed, 'purple')
-np.write()
+__np.colour(powerLed, 'red')
+__np.colour(hoseLed, 'purple')
+__np.colour(irrigationLed, 'purple')
+__np.colour(pumpLed, 'purple')
+__np.write()
+
+__sensorname = ''
+__deviceid = ''
+
+__functionSelect = 0
+__functionSelectLast = -1
+__waterOn = 0
+__waterOnLast = -1
 
 
 def getdeviceid():
+    global __deviceid
 
-    deviceid = ubinascii.hexlify(machine.unique_id()).decode()
-    deviceid = deviceid.replace('b\'', '')
-    deviceid = deviceid.replace('\'', '')
+    __deviceid = ubinascii.hexlify(machine.unique_id()).decode()
+    __deviceid = __deviceid.replace('b\'', '')
+    __deviceid = __deviceid.replace('\'', '')
 
-    # print(deviceid)
-
-    return deviceid
+    return __deviceid
 
 
 def getFullUrl(restFunction):
-    # return restHost.replace('{0}', restFunction)
 
     return restHost + '/' + restFunction + '/'
 
 
 def isstatechanged(state):
     returnvalue = 0
-    # url = "http://192.168.86.240:5000/{0}/".replace('{0}', state)
+
     url = getFullUrl(state)
 
     print(url)
@@ -104,26 +108,25 @@ def testfornetwork():
 
 
 def main():
+    global __sensorname, __deviceid, __functionSelect, __waterOn, __functionSelectLast
     testfornetwork()
-
+    
     debug = False
-    sensorname = 'switch-user'
+    __sensorname = 'switch-user'
+    __deviceid = getdeviceid()
 
     if debug:
-        sensorname += '-debug'
+        __sensorname += "-" + __deviceid + '-debug'
 
-    deviceid = getdeviceid()
+    mySensorRegistation = SensorRegistation(restHost, __deviceid)
+    mySensorRegistation.register(__sensorname, 'Hardware', 'JH')
 
-    mySensorRegistation = SensorRegistation(deviceid)
-    mySensorRegistation.register(sensorname, 'Hardware', 'JH')
-
-    myheartbeat = HeartBeat(deviceid)
+    myheartbeat = HeartBeat(restHost, __deviceid)
     myheartbeat.beat()
 
-    mytime = TimeTank(deviceid)
+    mytime = TimeTank(__deviceid)
     while not mytime.settime():
         pass
-    # mytime.settime(1)
 
     rtc = RTC()
     sampletimes = [1, 6, 11, 16, 21, 26, 31, 36, 41, 46, 51, 56]
@@ -132,22 +135,22 @@ def main():
     lastMin = 0
     gethour = 0
 
-    vars.functionSelect = functionSelectPin.value()
-    vars.waterOn = waterOnPin.value()
+    __functionSelect = __functionSelectPin.value()
+    __waterOn = __waterOnPin.value()
 
-    if vars.functionSelect:
-        np.colour(irrigationLed, 'indigo')
-        np.colour(hoseLed, 'purple')
+    if __functionSelect:
+        __np.colour(irrigationLed, 'indigo')
+        __np.colour(hoseLed, 'purple')
     else:
-        np.colour(irrigationLed, 'purple')
-        np.colour(hoseLed, 'indigo')
+        __np.colour(irrigationLed, 'purple')
+        __np.colour(hoseLed, 'indigo')
 
-    if vars.waterOn:
-        np.colour(pumpLed, 'purple')
+    if __waterOn:
+        __np.colour(pumpLed, 'purple')
     else:
-        np.colour(pumpLed, 'green')
+        __np.colour(pumpLed, 'green')
 
-    np.write()
+    __np.write()
 
     while True:
         timeNow = rtc.datetime()
@@ -155,75 +158,70 @@ def main():
         currMinute = timeNow[5]
 
         if currMinute not in sampletimes and isMinuteProcess == 0:
-            # process goes here
-
             isMinuteProcess = 1
 
         if currMinute in sampletimes and isMinuteProcess == 1:
-            # process goes here
-
             isMinuteProcess = 0
 
         if lastMin != currMinute:
-            # process goes here
-            myheartbeat.beat()
-
             lastMin = currMinute
+
+            myheartbeat.beat()
 
         if currHour not in samplehours and gethour == 0:
             gethour = 1
 
         if currHour in samplehours and gethour == 1:
             gethour = 0
+
             local = utime.localtime()
             while not mytime.settime():
                 pass
-            # mytime.settime(1)
 
         # Read switch inputs
-        vars.functionSelect = functionSelectPin.value()
-        vars.waterOn = waterOnPin.value()
+        __functionSelect = __functionSelectPin.value()
+        __waterOn = __waterOnPin.value()
         functionStateChanged = False
         sensorValue = 0
 
         # Check against the last input
-        if vars.functionSelect != vars.functionSelectLast:
-            if vars.functionSelect:
-                np.colour(irrigationLed, 'indigo')
-                np.colour(hoseLed, 'purple')
+        if __functionSelect != __functionSelectLast:
+            if __functionSelect:
+                __np.colour(irrigationLed, 'indigo')
+                __np.colour(hoseLed, 'purple')
             else:
-                np.colour(irrigationLed, 'purple')
-                np.colour(hoseLed, 'indigo')
+                __np.colour(irrigationLed, 'purple')
+                __np.colour(hoseLed, 'indigo')
 
             functionStateChanged = True
 
-            vars.functionSelectLast = vars.functionSelect  # Set the last pointers
-            # print('if ( functionSelect != functionSelectLast ):')
+            __functionSelectLast = __functionSelect  # Set the last pointers
+            # print('if ( __functionSelect != __functionSelectLast ):')
 
-        if vars.waterOn != vars.waterOnLast:
-            if vars.waterOn:  # water on
-                np.colour(pumpLed, 'purple')
+        if __waterOn != __waterOnLast:
+            if __waterOn:  # water on
+                __np.colour(pumpLed, 'purple')
             else:  # water off
-                np.colour(pumpLed, 'green')
+                __np.colour(pumpLed, 'green')
 
             functionStateChanged = True
 
-            vars.waterOnLast = vars.waterOn  # Set the last pointers
-            # print('if ( waterOn != waterOnLast ):')
+            __waterOnLast = __waterOn  # Set the last pointers
+            # print('if ( __waterOn != __waterOnLast ):')
 
         if functionStateChanged:
 
-            if vars.functionSelect:
+            if __functionSelect:
                 sensorValue = 1
             else:
                 sensorValue = 2
 
-            if not vars.waterOn:  # water on
+            if not __waterOn:  # water on
                 sensorValue += 4
 
             url = "http://192.168.86.240:5000/sensorStateWrite/{0}/{1}/{2}"
-            url = url.replace('{0}', deviceid)  # sensor id
-            url = url.replace('{1}', sensorname)  # sensor type
+            url = url.replace('{0}', __deviceid)  # sensor id
+            url = url.replace('{1}', __sensorname)  # sensor type
             url = url.replace('{2}', str(sensorValue))  # sensor value
 
             print(url)
@@ -237,7 +235,8 @@ def main():
             except:
                 print('Fail www connect...')
 
-        np.write()
+        __np.write()
 
 
 main()
+
